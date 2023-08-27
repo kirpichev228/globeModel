@@ -2,9 +2,9 @@ import * as THREE from 'three';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
-function setupScene(sceneWidth, sceneHeight, backgroundColor, mouseDrag, zoom) {
+function setupScene(sceneWidth, sceneHeight, backgroundColor, mouseDrag, cameraPosition) {
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, sceneWidth / sceneHeight, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(55, sceneWidth / sceneHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer();
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enabled = mouseDrag;
@@ -12,8 +12,14 @@ function setupScene(sceneWidth, sceneHeight, backgroundColor, mouseDrag, zoom) {
     renderer.setSize(sceneWidth, sceneHeight);
     document.body.appendChild(renderer.domElement);
 
-    camera.position.z = zoom;
+    camera.position.z = cameraPosition.z;
+    camera.position.y = cameraPosition.y;
+    camera.position.x = cameraPosition.x;
+
     scene.background = new THREE.Color(backgroundColor);
+
+    const axesHelper = new THREE.AxesHelper( 180 );
+    scene.add( axesHelper );
 
     return { scene, camera, renderer, controls };
 }
@@ -21,7 +27,7 @@ function setupScene(sceneWidth, sceneHeight, backgroundColor, mouseDrag, zoom) {
 function loadModel(scene, pathToObj, modelColor, objectPosition, objectRotation) {
     const loader = new OBJLoader();
     loader.load(pathToObj, function (object) {
-        const colorMaterial = new THREE.MeshBasicMaterial({ color: modelColor });
+        const colorMaterial = new THREE.MeshStandardMaterial({ color: modelColor });
         object.traverse(child => {
             if (child instanceof THREE.Mesh) {
                 child.material = colorMaterial;
@@ -49,6 +55,15 @@ function setupMouseMove(scene, dragSpeed) {
     });
 }
 
+function addLights(scene) {
+    // const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Ambient light
+    // scene.add(ambientLight);
+
+    // const directionalLight = new THREE.DirectionalLight(0xffffff, 50); // Directional light
+    // directionalLight.position.set(-30, -30, -300);  // Set the light's position
+    // scene.add(directionalLight);
+}
+
 function animateScene(scene, rotationSpeed, controls, camera, renderer) {
     function animate() {
         requestAnimationFrame(animate);
@@ -60,24 +75,31 @@ function animateScene(scene, rotationSpeed, controls, camera, renderer) {
     animate();
 }
 
+
+
 export function globeDraw(options = {}) {
     const {
-        sceneWidth = window.innerWidth,
-        sceneHeight = window.innerHeight,
+        sceneWidth = 600,
+        sceneHeight = 724,
         backgroundColor = '#2f3035',
-        modelColor = 0xFFFFFF,
+        modelColor = 0x55565b,
         objectPosition = { x: 0, y: 0, z: 0 },
-        objectRotation = { x: Math.PI * 1.3, y: Math.PI / 1.8, z: 0 },
-        mouseDrag = false,
-        dragSpeed = 0.001,
+        objectRotation = { x: -0.349066, y: 1.029744, z: 3.8571776 },
+        mouseDrag = true,
+        dragSpeed = 0.0007,
         autoSpeed = 0,
-        zoom = 180,
+        cameraPosition = {
+            x: 100,
+            y: 100,
+            z: 165
+        },
         pathToObj = '/globus/Severin earth model (1) (1).obj'
     } = options;
 
-    const { scene, camera, renderer, controls } = setupScene(sceneWidth, sceneHeight, backgroundColor, mouseDrag, zoom);
+    const { scene, camera, renderer, controls } = setupScene(sceneWidth, sceneHeight, backgroundColor, mouseDrag, cameraPosition);
     loadModel(scene, pathToObj, modelColor, objectPosition, objectRotation);
     setupMouseMove(scene, dragSpeed);
+    addLights(scene);
     animateScene(scene, autoSpeed, controls, camera, renderer);
 }
 
