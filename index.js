@@ -1,16 +1,20 @@
 import * as THREE from 'three';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+// const container1 = document.querySelector('.enter')
 
-function setupScene(sceneWidth, sceneHeight, backgroundColor, mouseDrag, cameraPosition) {
+function setupScene(sceneWidth, sceneHeight, backgroundColor, mouseDrag, cameraPosition, container) {
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(55, sceneWidth / sceneHeight, 0.1, 1000);
+
+    const aspectRatio = sceneWidth / sceneHeight;
+
+    const camera = new THREE.PerspectiveCamera(35, aspectRatio, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer();
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enabled = mouseDrag;
 
     renderer.setSize(sceneWidth, sceneHeight);
-    document.body.appendChild(renderer.domElement);
+    container.appendChild(renderer.domElement);
 
     camera.position.z = cameraPosition.z;
     camera.position.y = cameraPosition.y;
@@ -18,8 +22,16 @@ function setupScene(sceneWidth, sceneHeight, backgroundColor, mouseDrag, cameraP
 
     scene.background = new THREE.Color(backgroundColor);
 
-    const axesHelper = new THREE.AxesHelper( 180 );
-    scene.add( axesHelper );
+    // const axesHelper = new THREE.AxesHelper( 180 );
+    // scene.add( axesHelper );
+
+    window.addEventListener('resize', () => {
+        const newWidth = container.offsetWidth;
+        const newHeight = container.offsetHeight;
+        renderer.setSize(newWidth, newHeight);
+        camera.aspect = newWidth / newHeight;
+        camera.updateProjectionMatrix();
+    });
 
     return { scene, camera, renderer, controls };
 }
@@ -27,7 +39,7 @@ function setupScene(sceneWidth, sceneHeight, backgroundColor, mouseDrag, cameraP
 function loadModel(scene, pathToObj, modelColor, objectPosition, objectRotation) {
     const loader = new OBJLoader();
     loader.load(pathToObj, function (object) {
-        const colorMaterial = new THREE.MeshStandardMaterial({ color: modelColor });
+        const colorMaterial = new THREE.MeshPhongMaterial({ color: modelColor });
         object.traverse(child => {
             if (child instanceof THREE.Mesh) {
                 child.material = colorMaterial;
@@ -40,7 +52,7 @@ function loadModel(scene, pathToObj, modelColor, objectPosition, objectRotation)
     });
 }
 
-function setupMouseMove(scene, dragSpeed) {
+function setupMouseMove(scene, dragSpeed, rotationAngles) {
     let previousMouseX = 0;
 
     document.addEventListener('mousemove', (event) => {
@@ -49,6 +61,12 @@ function setupMouseMove(scene, dragSpeed) {
         if (previousMouseX !== 0) {
             const deltaX = mouseX - previousMouseX;
             scene.rotation.y += deltaX * dragSpeed;
+
+            if (scene.rotation.y > rotationAngles.right) {
+                scene.rotation.y = rotationAngles.right;
+            } else if (scene.rotation.y < rotationAngles.left) {
+                scene.rotation.y = rotationAngles.left;
+            }
         }
 
         previousMouseX = mouseX;
@@ -56,12 +74,23 @@ function setupMouseMove(scene, dragSpeed) {
 }
 
 function addLights(scene) {
-    // const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Ambient light
-    // scene.add(ambientLight);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); 
+    scene.add(ambientLight);
 
-    // const directionalLight = new THREE.DirectionalLight(0xffffff, 50); // Directional light
-    // directionalLight.position.set(-30, -30, -300);  // Set the light's position
-    // scene.add(directionalLight);
+    const directionalLightRT = new THREE.DirectionalLight(0xffffff, 2);
+    directionalLightRT.position.set(0.1, 0.7, -1.5); 
+    const directionalLightRB = new THREE.DirectionalLight(0xffffff, 2);
+    directionalLightRB.position.set(-1.5, 0.7, -1.7);
+    const directionalLightLT = new THREE.DirectionalLight(0xffffff, 0.5);
+    directionalLightLT.position.set(0.1, -1, -0.4); 
+    const directionalLightLB = new THREE.DirectionalLight(0xffffff, 0.5);
+    directionalLightLB.position.set(-0.1, -1, -0.4);
+ 
+    scene.add(directionalLightRT);
+    scene.add(directionalLightRB);
+    scene.add(directionalLightLT);
+    scene.add(directionalLightLB);
+
 }
 
 function animateScene(scene, rotationSpeed, controls, camera, renderer) {
@@ -79,26 +108,39 @@ function animateScene(scene, rotationSpeed, controls, camera, renderer) {
 
 export function globeDraw(options = {}) {
     const {
-        sceneWidth = 600,
-        sceneHeight = 724,
+        container = document.querySelector('body'),
+        sceneWidth = container.offsetWidth,
+        sceneHeight = container.offsetHeight,
         backgroundColor = '#2f3035',
-        modelColor = 0x55565b,
-        objectPosition = { x: 0, y: 0, z: 0 },
-        objectRotation = { x: -0.349066, y: 1.029744, z: 3.8571776 },
+        rotationAngles = {
+            left: -Math.PI / 6,
+            right: Math.PI / 6
+        },
+        modelColor = 0xFFFFFF,
+        objectPosition = { 
+            x: 0, 
+            y: 0, 
+            z: 0 
+        },
+        objectRotation = { 
+            x: -0.349066, 
+            y: 1.029744, 
+            z: 3.8571776 
+        },
         mouseDrag = true,
-        dragSpeed = 0.0007,
+        dragSpeed = 0.0006,
         autoSpeed = 0,
         cameraPosition = {
             x: 100,
-            y: 100,
-            z: 165
+            y: 120,
+            z: 300
         },
         pathToObj = '/globus/Severin earth model (1) (1).obj'
     } = options;
 
-    const { scene, camera, renderer, controls } = setupScene(sceneWidth, sceneHeight, backgroundColor, mouseDrag, cameraPosition);
+    const { scene, camera, renderer, controls } = setupScene(sceneWidth, sceneHeight, backgroundColor, mouseDrag, cameraPosition, container);
     loadModel(scene, pathToObj, modelColor, objectPosition, objectRotation);
-    setupMouseMove(scene, dragSpeed);
+    setupMouseMove(scene, dragSpeed, rotationAngles);
     addLights(scene);
     animateScene(scene, autoSpeed, controls, camera, renderer);
 }
